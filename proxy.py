@@ -296,8 +296,8 @@ class ProxyServer:
             endpoint_url=self._endpoint_url,
         )
         watchdog_task = asyncio.create_task(self._alpaca_watchdog())
-        log.info("Proxy server listening on ws://localhost:%d", self._port)
-        async with websockets.serve(self._client_handler, "localhost", self._port):
+        log.info("Proxy server listening on ws://0.0.0.0:%d", self._port)
+        async with websockets.serve(self._client_handler, "0.0.0.0", self._port):
             await watchdog_task  # runs forever
 
     async def _client_handler(self, ws) -> None:
