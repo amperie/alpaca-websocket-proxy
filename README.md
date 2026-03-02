@@ -14,11 +14,11 @@ Instead of every algorithm opening its own connection to Alpaca, they all connec
 
 ```
 [Client 1] ──┐
-[Client 2] ──┤  ws://localhost:8765   ┌───────────────┐   wss://stream.data.alpaca.markets
+[Client 2] ──┤  ws://0.0.0.0:8765     ┌───────────────┐   wss://stream.data.alpaca.markets
 [Client 3] ──┘ ─────────────────────> │  ProxyServer  │ ──────────────────────────────────>
-                                       │               │     AlpacaClient (single conn)
-                                       │ ClientManager │ <──────────────────────────────────
-                                       └───────────────┘        bar data routed to clients
+                                      │ AlpacaClient (single conn)
+                                      │ ClientManager │ <──────────────────────────────────
+                                      └───────────────┘        bar data routed to clients
 ```
 
 - Subscriptions are **additive** — each client sends its own symbols and the proxy subscribes Alpaca to the union.
@@ -100,7 +100,7 @@ python main.py \
 
 The proxy is ready when you see:
 ```
-2026-01-01 12:00:00 [INFO] proxy: Proxy server listening on ws://localhost:8765
+2026-01-01 12:00:00 [INFO] proxy: Proxy server listening on ws://0.0.0.0:8765
 ```
 
 ## Connecting a client
