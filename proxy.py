@@ -36,6 +36,7 @@ import asyncio
 import json
 import logging
 import uuid
+from datetime import datetime, timezone
 from typing import Callable
 
 import msgpack
@@ -47,6 +48,23 @@ log = logging.getLogger(__name__)
 
 # Default upstream endpoint; can be overridden via --alpaca-endpoint-url / ALPACA_ENDPOINT_URL.
 ALPACA_WS_URL_TEMPLATE = "wss://stream.data.alpaca.markets/v2/{feed}"
+
+
+def _bar_for_client(bar: dict) -> dict:
+    """
+    Prepare a bar dict received as JSON from Alpaca for re-encoding as MessagePack.
+
+    Alpaca's real WebSocket endpoint encodes the timestamp field "t" as a native
+    msgpack Timestamp (ext type -1).  When we receive bars as JSON the timestamp
+    arrives as an ISO 8601 string.  The Alpaca Python SDK calls .to_datetime() on
+    whatever it unpacks from "t", so it must be a msgpack.Timestamp — not a str.
+    """
+    result = dict(bar)
+    t = result.get("t")
+    if isinstance(t, str):
+        dt = datetime.fromisoformat(t.replace("Z", "+00:00"))
+        result["t"] = msgpack.Timestamp.from_datetime(dt)
+    return result
 
 
 # ---------------------------------------------------------------------------
@@ -378,7 +396,7 @@ class ProxyServer:
         clients = self._manager.get_clients_for_symbol(symbol)
         if not clients:
             return
-        payload = msgpack.packb([bar], use_bin_type=True)
+        payload = msgpack.packb([_bar_for_client(bar)], use_bin_type=True)
 
         async def send_to(ws):
             try:
