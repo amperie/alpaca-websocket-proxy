@@ -407,17 +407,20 @@ class ProxyServer:
 
         await asyncio.gather(*(send_to(ws) for ws in clients))
 
-    async def _maybe_reconnect(self) -> None:
+    async def _maybe_reconnect(self, force: bool = False) -> None:
         """
         Recalculate the aggregate symbol set and reconnect Alpaca only if it has changed.
 
         The asyncio.Lock ensures that concurrent calls (e.g. two clients subscribing at
         the same time, or a subscribe and a disconnect racing) collapse into a single
         reconnect using the latest symbol set.
+
+        Pass force=True to reconnect even if the symbol set is unchanged (used by the
+        watchdog when the upstream task has died but subscriptions haven't changed).
         """
         async with self._reconnect_lock:
             new_symbols = self._manager.get_all_symbols()
-            if new_symbols == self._alpaca.symbols:
+            if not force and new_symbols == self._alpaca.symbols:
                 return  # Nothing changed; skip reconnect.
             if not new_symbols:
                 log.info("No active subscriptions; disconnecting Alpaca")
@@ -441,7 +444,7 @@ class ProxyServer:
             )
             if symbols and not task_alive:
                 log.warning("Watchdog: Alpaca task dead with active subscriptions; reconnecting")
-                asyncio.create_task(self._maybe_reconnect())
+                asyncio.create_task(self._maybe_reconnect(force=True))
 
     @staticmethod
     async def _send_error(ws, code: int, msg: str) -> None:
