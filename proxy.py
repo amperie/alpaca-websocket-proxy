@@ -172,7 +172,7 @@ class AlpacaClient:
         """
         url = self._endpoint_url or ALPACA_WS_URL_TEMPLATE.format(feed=self._feed)
         log.info("Connecting to Alpaca: %s", url)
-        self._ws = await websockets.connect(url)
+        self._ws = await websockets.connect(url, open_timeout=10)
         # Alpaca sends an initial [{"T":"success","msg":"connected"}] on connect.
         await self._ws.recv()
         await self._auth(self._ws)
@@ -426,7 +426,10 @@ class ProxyServer:
                 log.info("No active subscriptions; disconnecting Alpaca")
                 await self._alpaca.disconnect()
             else:
-                await self._alpaca.reconnect(new_symbols)
+                try:
+                    await self._alpaca.reconnect(new_symbols)
+                except Exception as exc:
+                    log.error("Alpaca reconnect failed: %s — watchdog will retry in 30s", exc)
 
     async def _alpaca_watchdog(self) -> None:
         """
